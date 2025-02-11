@@ -1,9 +1,8 @@
 
 import matplotlib.pyplot as plt
-import torch
 import gym
 import numpy as np
-from PPOAgent import PPOAgent
+from algorithms.PPOAgent import PPOAgent
 
 class Memory:
     def __init__(self):

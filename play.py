@@ -1,5 +1,5 @@
 
-from PPOAgent import PPOAgent
+from algorithms.PPOAgent import PPOAgent
 import gym
 import time
 import numpy as np
@@ -7,8 +7,8 @@ import numpy as np
 load_model = True
 agent = PPOAgent(load_model)
 
-agent.action_layer.eval()
-agent.value_layer.eval()
+agent.actor_critic.actor_layers.eval()
+agent.actor_critic.critic_layers.eval()
 
 env = gym.make('LunarLander-v2', render_mode='human')
 
