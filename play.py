@@ -3,12 +3,11 @@ from algorithms.PPOAgent import PPOAgent
 import gym
 import time
 import numpy as np
+from constants import kUpdateEpochNum, kTimeoutEpochNum
 
-load_model = True
-agent = PPOAgent(load_model)
-
-agent.actor_critic.actor_layers.eval()
-agent.actor_critic.critic_layers.eval()
+model_path = "export/model_257.pth"
+agent = PPOAgent(model_path)
+agent.actor_critic.eval()
 
 env = gym.make('LunarLander-v2', render_mode='human')
 
@@ -21,8 +20,14 @@ for episode in range(5):
         state, reward, terminated, truncated, info = env.step(action)
         rewards.append(reward)
         step += 1
-        if terminated or step >= 600:
+
+        if step >= kTimeoutEpochNum:
+            print("timeout!")
             break
+
+        if terminated:
+            break
+
         time.sleep(0.01)
     print("total reward: ", np.sum(rewards))
     print('Game Ended')

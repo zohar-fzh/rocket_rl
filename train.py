@@ -3,57 +3,66 @@ import matplotlib.pyplot as plt
 import gym
 import numpy as np
 from algorithms.PPOAgent import PPOAgent
+from memory.Memory import Memory
+from constants import kUpdateEpochNum, kTimeoutEpochNum
+from torch.utils.tensorboard import SummaryWriter
 
-class Memory:
-    def __init__(self):
-        self.actions = []   # 行动(共4种)
-        self.states = []    # 状态, 由8个数字组成
-        self.logprobs = []  # 概率
-        self.rewards = []   # 奖励
-        self.is_dones = []  ## 游戏是否结束 is_terminals?
+kEpochNum = 3000
 
-    def clear_memory(self):
-        del self.actions[:]
-        del self.states[:]
-        del self.logprobs[:]
-        del self.rewards[:]
-        del self.is_dones[:]
+# model_path = "export/model_227.pth"
+# agent = PPOAgent(model_path)
+agent = PPOAgent()
+best_reward = agent.best_reward
+writer = SummaryWriter('logs/')
+agent.set_writer(writer)
 
-load_model = True
-agent = PPOAgent(load_model)
 memory = Memory()
 rewards_list = []
 
 env = gym.make('LunarLander-v2', render_mode='rgb_array')
 
-for i in range(3000):
-    rewards = []
+for it in range(kEpochNum):
     state = env.reset()[0]
+    rewards = []    
     while True:
-        action, action_prob = agent.act(state)              ### 按照策略网络输出的概率随机采样一个动作
+        action, action_prob = agent.act(state)
+
         memory.states.append(state)
         memory.actions.append(action)
         memory.logprobs.append(action_prob)
-        next_state, reward, done, _, _ = env.step(action)   ### 与环境state进行交互，输出reward 和 环境next_state
-        state = next_state
-        rewards.append(reward)                              ### 记录每一个动作的reward
+
+        next_state, reward, done, _, _ = env.step(action)
+
         memory.rewards.append(reward)
         memory.is_dones.append(done)
 
-        if len(memory.rewards) >= 1200:
-            agent.update(memory)
+        state = next_state
+        rewards.append(reward)
+
+        if len(memory.rewards) >= kUpdateEpochNum:
+            agent.update(memory, it)
             memory.clear_memory()
 
-        if done or len(rewards) > 1024:
+        if len(rewards) > kTimeoutEpochNum or done:
             rewards_list.append(np.sum(rewards))
             break
 
-    if i%5 == 0:
-        print(f"epoch: {i} ,rewards looks like ", rewards_list[-1])
+    rewards_now = rewards_list[-1]
+    writer.add_scalar('Loss/rewards',   rewards_now, it)  
+    if rewards_now > best_reward:
+        print("saving best rewards ", rewards_now, " in epoch ", it)
+        best_reward = rewards_now
+        agent.save(rewards_now)
+
+    if it%10==0:
+        print("epoch ", it, " rewards like: ", rewards_now)
 
 plt.plot(range(len(rewards_list)), rewards_list)
+plt.savefig(
+    'results.png',
+    dpi=300,
+    bbox_inches='tight',
+    facecolor='white'
+)
 plt.show()
 plt.close()
-
-agent.save()
-
